@@ -1,35 +1,18 @@
 plugins {
     id('com.android.application')
     id('com.getkeepsafe.dexcount')
-    id('com.github.triplet.play') version '2.7.5' apply false
+    id('com.github.triplet.play') version '3.7.0-agp4.2' apply false
 }
+apply from: "../common.gradle"
+apply from: "../playFlavor.gradle"
 
 android {
-    compileSdkVersion rootProject.ext.compileSdkVersion
-
-    viewBinding {
-        enabled = true
-    }
-
-    lintOptions {
-        checkGeneratedSources = true
-    }
-
     defaultConfig {
-        minSdkVersion rootProject.ext.minSdkVersion
-        targetSdkVersion rootProject.ext.targetSdkVersion
         // Version code schema:
         // "1.2.3-beta4"    -> 1020304
         // "1.2.3"          -> 1020395
-        versionCode 2020003
-        versionName "2.2.0-beta3"
-
-        multiDexEnabled false
-        vectorDrawables.useSupportLibrary true
-        vectorDrawables.generatedDensities = []
-
-        testApplicationId "de.test.antennapod"
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        versionCode 2050001
+        versionName "2.5.0-beta1"
 
         def commit = ""
         try {
@@ -60,8 +43,8 @@ android {
 
     signingConfigs {
         releaseConfig {
-            v1SigningEnabled true
-            v2SigningEnabled true
+            enableV1Signing true
+            enableV2Signing true
 
             if (project.hasProperty("releaseStoreFile")) {
                 storeFile file(releaseStoreFile)
@@ -91,18 +74,11 @@ android {
             applicationIdSuffix ".debug"
             resValue "string", "provider_authority", "de.danoeh.antennapod.debug.provider"
 
-            // debug build has method count over 64k single-dex threshold.
-            // For building debug build to use on Android < 21 (pre-Android 5) devices,
-            // you need to manually change class
-            // de.danoeh.antennapod.PodcastApp to extend MultiDexApplication .
-            // See Issue #2813
-            multiDexEnabled true
-
             dexcount {
                 if (project.hasProperty("enableDexcountInDebug")) {
-                    runOnEachPackage enableDexcountInDebug.toBoolean()
+                    runOnEachPackage = enableDexcountInDebug.toBoolean()
                 } else { // default to not running dexcount
-                    runOnEachPackage false
+                    runOnEachPackage = false
                 }
             }
         }
@@ -110,50 +86,22 @@ android {
             resValue "string", "provider_authority", "de.danoeh.antennapod.provider"
             minifyEnabled true
             shrinkResources true
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), "proguard.cfg"
             signingConfig signingConfigs.releaseConfig
         }
     }
 
-    packagingOptions {
-        exclude "META-INF/LICENSE.txt"
-        exclude "META-INF/NOTICE.txt"
-    }
-
     lintOptions {
         disable 'ObsoleteLintCustomCheck', 'CheckResult', 'UnusedAttribute', 'BatteryLife', 'InflateParams',
-                'GradleDependency', 'RestrictedApi', 'TrustAllX509TrustManager', 'ExportedReceiver', 'AllowBackup',
+                'RestrictedApi', 'TrustAllX509TrustManager', 'ExportedReceiver', 'AllowBackup', 'VectorDrawableCompat',
                 'StaticFieldLeak', 'UseCompoundDrawables', 'NestedWeights', 'Overdraw', 'UselessParent', 'TextFields',
                 'AlwaysShowAction', 'Autofill', 'ClickableViewAccessibility', 'ContentDescription',
                 'KeyboardInaccessibleWidget', 'LabelFor', 'SetTextI18n', 'HardcodedText', 'RelativeOverlap',
                 'RtlCompat', 'RtlHardcoded', 'MissingMediaBrowserServiceIntentFilter', 'VectorPath',
-                'InvalidPeriodicWorkRequestInterval', 'VectorDrawableCompat'
-        checkDependencies true
-        warningsAsErrors true
-        abortOnError true
-    }
-
-    compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+                'InvalidPeriodicWorkRequestInterval'
     }
 
     aaptOptions {
         additionalParameters "--no-version-vectors"
-    }
-
-    testOptions {
-        animationsDisabled = true
-    }
-
-    flavorDimensions "market"
-    productFlavors {
-        free {
-            dimension "market"
-        }
-        play {
-            dimension "market"
-        }
     }
 
     dexOptions {
@@ -163,18 +111,27 @@ android {
 
 dependencies {
     implementation project(":core")
+    implementation project(":event")
     implementation project(':model')
+    implementation project(':net:sync:gpoddernet')
+    implementation project(':net:sync:model')
+    implementation project(':parser:feed')
+    implementation project(':playback:base')
+    implementation project(':playback:cast')
     implementation project(':ui:app-start-intent')
     implementation project(':ui:common')
 
     annotationProcessor "androidx.annotation:annotation:$annotationVersion"
     implementation "androidx.appcompat:appcompat:$appcompatVersion"
     implementation 'androidx.coordinatorlayout:coordinatorlayout:1.1.0'
+    implementation "androidx.core:core:$coreVersion"
+    implementation "androidx.fragment:fragment:$fragmentVersion"
     implementation 'androidx.gridlayout:gridlayout:1.0.0'
     implementation "androidx.media:media:$mediaVersion"
+    implementation "androidx.palette:palette:$paletteVersion"
     implementation "androidx.preference:preference:$preferenceVersion"
-    implementation 'androidx.recyclerview:recyclerview:1.1.0'
-    implementation 'androidx.viewpager2:viewpager2:1.1.0-alpha01'
+    implementation "androidx.recyclerview:recyclerview:$recyclerViewVersion"
+    implementation "androidx.viewpager2:viewpager2:$viewPager2Version"
     implementation "androidx.work:work-runtime:$workManagerVersion"
     implementation "com.google.android.material:material:$googleMaterialVersion"
 
@@ -194,11 +151,13 @@ dependencies {
     implementation "com.joanzapata.iconify:android-iconify-fontawesome:$iconifyVersion"
     implementation "com.joanzapata.iconify:android-iconify-material:$iconifyVersion"
     implementation 'com.github.shts:TriangleLabelView:1.1.2'
-    implementation 'com.github.leinardi:FloatingActionButtonSpeedDial:3.1.1'
+    implementation 'com.leinardi.android:speed-dial:3.2.0'
     implementation "com.github.AntennaPod:AntennaPod-AudioPlayer:$audioPlayerVersion"
     implementation 'com.github.mfietz:fyydlin:v0.5.0'
     implementation 'com.github.ByteHamster:SearchPreference:v2.0.0'
-    implementation 'com.github.skydoves:balloon:1.1.5'
+    implementation 'com.github.skydoves:balloon:1.4.0'
+    implementation 'com.github.xabaras:RecyclerViewSwipeDecorator:1.3'
+    implementation 'com.annimon:stream:1.2.2'
 
     // Non-free dependencies:
     playImplementation 'com.google.android.play:core:1.8.0'
@@ -218,8 +177,8 @@ dependencies {
 if (project.hasProperty("antennaPodPlayPublisherCredentials")) {
     apply plugin: 'com.github.triplet.play'
     play {
-        track = 'alpha'
-        serviceAccountCredentials = file(antennaPodPlayPublisherCredentials)
+        track.set('alpha')
+        serviceAccountCredentials.set(file(antennaPodPlayPublisherCredentials))
     }
 }
 

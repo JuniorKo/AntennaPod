@@ -77,6 +77,9 @@ public class AntennapodHttpClient {
             if (response.code() == HttpURLConnection.HTTP_MOVED_PERM
                     || response.code() == StatusLine.HTTP_PERM_REDIRECT) {
                 String location = response.header("Location");
+                if (location == null) {
+                    return response;
+                }
                 if (location.startsWith("/")) { // URL is not absolute, but relative
                     HttpUrl url = request.url();
                     location = url.scheme() + "://" + url.host() + location;
@@ -118,14 +121,13 @@ public class AntennapodHttpClient {
         if (config.type != Proxy.Type.DIRECT) {
             int port = config.port > 0 ? config.port : ProxyConfig.DEFAULT_PORT;
             SocketAddress address = InetSocketAddress.createUnresolved(config.host, port);
-            Proxy proxy = new Proxy(config.type, address);
-            builder.proxy(proxy);
+            builder.proxy(new Proxy(config.type, address));
             if (!TextUtils.isEmpty(config.username) && config.password != null) {
-                String credentials = Credentials.basic(config.username, config.password);
-                builder.interceptors().add(chain -> {
-                    Request request = chain.request().newBuilder()
-                            .header("Proxy-Authorization", credentials).build();
-                    return chain.proceed(request);
+                builder.proxyAuthenticator((route, response) -> {
+                    String credentials = Credentials.basic(config.username, config.password);
+                    return response.request().newBuilder()
+                            .header("Proxy-Authorization", credentials)
+                            .build();
                 });
             }
         }

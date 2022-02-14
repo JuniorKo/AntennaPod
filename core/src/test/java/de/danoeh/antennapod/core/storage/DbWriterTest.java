@@ -188,14 +188,13 @@ public class DbWriterTest {
         assertTrue(queue.size() != 0);
 
         DBWriter.deleteFeedMediaOfItem(context, media.getId());
-        Awaitility.await().until(() -> !dest.exists());
+        Awaitility.await().timeout(2, TimeUnit.SECONDS).until(() -> !dest.exists());
         media = DBReader.getFeedMedia(media.getId());
         assertNotNull(media);
         assertFalse(dest.exists());
         assertFalse(media.isDownloaded());
         assertNull(media.getFile_url());
-        queue = DBReader.getQueue();
-        assertEquals(0, queue.size());
+        Awaitility.await().timeout(2, TimeUnit.SECONDS).until(() -> DBReader.getQueue().isEmpty());
     }
 
     @Test
@@ -776,6 +775,34 @@ public class DbWriterTest {
         List<FeedItem> loadedItems = DBReader.getFeedItemList(feed);
         for (FeedItem item : loadedItems) {
             assertTrue(item.isPlayed());
+        }
+    }
+
+    @Test
+    public void testRemoveAllNewFlags() throws Exception {
+        final int numItems = 10;
+        Feed feed = new Feed("url", null, "title");
+        feed.setItems(new ArrayList<>());
+        for (int i = 0; i < numItems; i++) {
+            FeedItem item = new FeedItem(0, "title " + i, "id " + i, "link " + i,
+                    new Date(), FeedItem.NEW, feed);
+            feed.getItems().add(item);
+        }
+
+        PodDBAdapter adapter = PodDBAdapter.getInstance();
+        adapter.open();
+        adapter.setCompleteFeed(feed);
+        adapter.close();
+
+        assertTrue(feed.getId() != 0);
+        for (FeedItem item : feed.getItems()) {
+            assertTrue(item.getId() != 0);
+        }
+
+        DBWriter.removeAllNewFlags().get();
+        List<FeedItem> loadedItems = DBReader.getFeedItemList(feed);
+        for (FeedItem item : loadedItems) {
+            assertFalse(item.isNew());
         }
     }
 

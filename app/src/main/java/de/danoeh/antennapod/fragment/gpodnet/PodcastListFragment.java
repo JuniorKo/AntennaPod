@@ -15,11 +15,11 @@ import de.danoeh.antennapod.R;
 import de.danoeh.antennapod.activity.MainActivity;
 import de.danoeh.antennapod.activity.OnlineFeedViewActivity;
 import de.danoeh.antennapod.adapter.gpodnet.PodcastListAdapter;
-import de.danoeh.antennapod.core.preferences.GpodnetPreferences;
+import de.danoeh.antennapod.core.sync.SynchronizationCredentials;
 import de.danoeh.antennapod.core.service.download.AntennapodHttpClient;
-import de.danoeh.antennapod.core.sync.gpoddernet.GpodnetService;
-import de.danoeh.antennapod.core.sync.gpoddernet.GpodnetServiceException;
-import de.danoeh.antennapod.core.sync.gpoddernet.model.GpodnetPodcast;
+import de.danoeh.antennapod.net.sync.gpoddernet.GpodnetService;
+import de.danoeh.antennapod.net.sync.gpoddernet.GpodnetServiceException;
+import de.danoeh.antennapod.net.sync.gpoddernet.model.GpodnetPodcast;
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
@@ -76,7 +76,8 @@ public abstract class PodcastListFragment extends Fragment {
         disposable = Observable.fromCallable(
                 () -> {
                     GpodnetService service = new GpodnetService(AntennapodHttpClient.getHttpClient(),
-                            GpodnetPreferences.getHosturl());
+                            SynchronizationCredentials.getHosturl(), SynchronizationCredentials.getDeviceID(),
+                            SynchronizationCredentials.getUsername(), SynchronizationCredentials.getPassword());
                     return loadPodcastData(service);
                 })
                 .subscribeOn(Schedulers.io())
@@ -100,7 +101,7 @@ public abstract class PodcastListFragment extends Fragment {
                         }, error -> {
                             gridView.setVisibility(View.GONE);
                             progressBar.setVisibility(View.GONE);
-                            txtvError.setText(getString(R.string.error_msg_prefix) + error.getMessage());
+                            txtvError.setText(error.getMessage());
                             txtvError.setVisibility(View.VISIBLE);
                             butRetry.setVisibility(View.VISIBLE);
                             Log.e(TAG, Log.getStackTraceString(error));
